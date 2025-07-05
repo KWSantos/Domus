@@ -1,5 +1,4 @@
-Object_Recognition/Home_Person_Dataset.v1i.yolov8
-Object_Recognition/yolov8n.pt
+Object_Recognition/Domestic-Objetcs.v1i.yolov8
 Object_Recognition/yolov11n.pt
 Object_Recognition/object_detection/
-main/wifi_keys.h
+Robot_Control/wifi_keys.h

@@ -1,5 +1,5 @@
 from ultralytics import YOLO
 
-model = YOLO("yolov8n.pt")
+model = YOLO("yolov8m.pt")
 
-results = model.train(data="Home_Person_Dataset.v1i.yolov8/data.yaml", epochs=100, imgsz=320)
+results = model.train(data="Domestic-Objetcs.v1i.yolov8/data.yaml", epochs=100, imgsz=320)
