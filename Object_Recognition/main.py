@@ -5,9 +5,7 @@ import numpy as np
 from ultralytics import YOLO
 
 MODEL_PATH = "yolov8m.pt"
-# ESP32_CAM_URI = "ws://10.42.0.2:81"
 ESP32_CAM_URI = "ws://192.168.0.106:81"
-# ESP32_WROVER_URI = "ws://10.42.0.3:81"
 ESP32_WROVER_URI = "ws://192.168.0.107:81"
 WINDOW_NAME = "Detecção de Objetos"
 
@@ -21,9 +19,9 @@ frame_lock = asyncio.Lock()
 last_command_sent = "STOP"
 is_robot_busy = False
 
+current_operation_mode = "IDLE"
+current_target_class = None
 
-current_operation_mode = "FINDER"
-current_target_class = "bottle"
 
 async def handle_finder_bring_mode(control_ws, target_box, frame_center):
     """Lógica para os modos FINDER e BRING, que é Alinhar e Avançar."""
@@ -72,6 +70,7 @@ async def handle_follow_mode(control_ws, target_box, frame_center):
         if "TURN" in command_to_send:
             is_robot_busy = True
 
+
 async def control_robot(control_ws, frame, results):
     """
     Função principal que atua como um roteador, chamando a lógica
@@ -79,7 +78,10 @@ async def control_robot(control_ws, frame, results):
     """
     global last_command_sent
 
-    if is_robot_busy:
+    if is_robot_busy or current_operation_mode == "IDLE":
+        if current_operation_mode == "IDLE" and last_command_sent != "STOP":
+            await control_ws.send("STOP")
+            last_command_sent = "STOP"
         return
 
     frame_center = frame.shape[1] // 2
@@ -90,17 +92,16 @@ async def control_robot(control_ws, frame, results):
 
     if valid_boxes:
         target_box = max(valid_boxes, key=lambda box: box.conf[0].item())
-
         if current_operation_mode == "FINDER" or current_operation_mode == "BRING":
             await handle_finder_bring_mode(control_ws, target_box, frame_center)
         elif current_operation_mode == "FOLLOW":
             await handle_follow_mode(control_ws, target_box, frame_center)
-
     else:
         if last_command_sent != "STOP":
             await control_ws.send("STOP")
             print(f"Modo: {current_operation_mode} | Procurando por {current_target_class}... | Comando: STOP")
             last_command_sent = "STOP"
+
 
 async def frame_receiver(cam_ws):
     global latest_frame
@@ -121,30 +122,55 @@ async def robot_response_handler(control_ws):
             message = await control_ws.recv()
             print(f"<-- Mensagem recebida do robô: {message}")
 
-            if message == "TURN_COMPLETE":
+            if message.startswith("IR_COMMAND:"):
+                new_mode = message.split(":")[1]
+                print(f">>> Comando IR: Trocando para o modo '{new_mode}'")
+
+                await control_ws.send("STOP")
+                last_command_sent = "STOP"
+                is_robot_busy = False
+
+                current_operation_mode = new_mode
+                if new_mode == "FINDER":
+                    current_target_class = "bottle"
+                elif new_mode == "BRING":
+                    current_target_class = "person"
+                elif new_mode == "FOLLOW":
+                    current_target_class = "person"
+
+            elif message == "TURN_COMPLETE":
                 is_robot_busy = False
                 last_command_sent = None
 
             elif message == "GRAB_SEQUENCE_COMPLETE":
                 if current_operation_mode == "FINDER":
-                    current_operation_mode = "BRING"
-                    current_target_class = "person"
+                    print(">>> OBJETO CAPTURADO! Robô em modo de espera.")
+                    print(">>> Pressione o botão 'BRING' (2) no controle para iniciar a entrega.")
+                    current_operation_mode = "IDLE"
                     is_robot_busy = False
-                    last_command_sent = None
+                    last_command_sent = "STOP"
+                    await control_ws.send("STOP")
+
+            elif message == "DELIVERY_COMPLETE":
+                print(">>> TAREFA FINALIZADA! ROBÔ EM MODO DE ESPERA.")
+                current_operation_mode = "IDLE"
+                current_target_class = None
+                is_robot_busy = False
+                await control_ws.send("STOP")
 
         except websockets.ConnectionClosed:
             break
 
 
 async def inference_and_control(control_ws):
-    """Loop principal de inferência, agora com controle de modo por teclado."""
+    """Loop principal de inferência."""
     global latest_frame, current_operation_mode, current_target_class
 
     while True:
         await asyncio.sleep(0.05)
         async with frame_lock:
             if latest_frame is None: continue
-            data = latest_frame;
+            data = latest_frame
             latest_frame = None
         if data:
             np_data = np.frombuffer(data, dtype=np.uint8)
@@ -152,21 +178,20 @@ async def inference_and_control(control_ws):
             if frame is None: continue
             frame = cv2.flip(frame, 0)
             frame_resized = cv2.resize(frame, (320, 320))
-            results = model.predict(source=frame_resized, conf=CONFIDENCE_THRESHOLD, verbose=False)
-            await control_robot(control_ws, frame_resized, results)
 
-            annotated_frame = results[0].plot()
+            annotated_frame = frame_resized
+            if current_operation_mode != "IDLE":
+                results = model.predict(source=frame_resized, conf=CONFIDENCE_THRESHOLD, verbose=False)
+                await control_robot(control_ws, frame_resized, results)
+                annotated_frame = results[0].plot()
+
+            cv2.putText(annotated_frame, f"MODO: {current_operation_mode.upper()}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX,
+                        0.7, (0, 255, 0), 2)
             cv2.imshow(WINDOW_NAME, annotated_frame)
 
             key = cv2.waitKey(1) & 0xFF
             if key == ord('q'):
                 break
-            elif key == ord('f'):
-                current_operation_mode = "FINDER"
-                current_target_class = "bottle"
-            elif key == ord('p'):
-                current_operation_mode = "FOLLOW"
-                current_target_class = "person"
 
 
 async def main():
@@ -175,11 +200,8 @@ async def main():
         async with websockets.connect(ESP32_CAM_URI, max_size=2 ** 22) as cam_ws, \
                 websockets.connect(ESP32_WROVER_URI) as control_ws:
             print("Conectado à Câmera e ao Robô.")
+            print("Robô iniciado em modo IDLE. Use o controle remoto para selecionar um modo.")
             await control_ws.send("STOP")
-
-            global current_operation_mode, current_target_class
-            current_operation_mode = "FINDER"
-            current_target_class = "bottle"
 
             tasks = [
                 frame_receiver(cam_ws),
