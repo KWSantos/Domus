@@ -157,6 +157,6 @@ Esses dados confirmam que o *fine-tuning* do modelo de visão computacional é c
 
 ## ✍️ Autor
 
-* **Kauê Santos da Cruz** - [GitHub: KaweSC02](https://github.com/KWSantos)
+* **Kauê Santos da Cruz** - [GitHub: KWSantos](https://github.com/KWSantos)
 
 Projeto desenvolvido para o curso de Ciência da Computação da Universidade Estadual do Centro-Oeste (UNICENTRO).
