@@ -10,7 +10,7 @@ Repositório do Trabalho de Conclusão de Curso (TCC) para o desenvolvimento do 
 
 O vídeo abaixo demonstra as principais funcionalidades do robô em ação: busca e coleta de objetos e o acompanhamento de um alvo humano.
 
-[![Demonstração do Robô Domus](https://img.youtube.com/vi/kauesantos729/0.jpg)]([https://www.youtube.com/watch?v=dQw4w9WgXcQ](https://youtube.com/shorts/7_xj1jiCRYU))
+[![Demonstração do Robô Domus](https://img.youtube.com/vi/0)](https://youtu.be/rp_-HHrAA_I)
 > **Clique na imagem para assistir ao vídeo de demonstração no YouTube**
 
 ---
@@ -62,10 +62,6 @@ A operação do Domus é governada por uma arquitetura de software distribuída 
     * **Responsabilidade**: Os "músculos" do robô, responsável por traduzir comandos em ações concretas.
     * **Funcionamento**: Recebe os comandos do host e os traduz em ações físicas, controlando os motores DC para locomoção e o servomotor da garra. Utiliza uma **Máquina de Estados Finitos (FSM)** para gerenciar sequências de ações e um sensor ultrassônico para evitar colisões.
     * **Hardware**: Placa ESP32-Wrover, Ponte H L298N, Motores DC, Servomotor, Sensor Ultrassônico HC-SR04.
-
-![Fluxograma do Funcionamento](https://i.imgur.com/k6lPprM.png)
-> *Fluxograma adaptado da Figura 6 do relatório do TCC.*
-
 ---
 
 ## 🚀 Tecnologias Utilizadas
