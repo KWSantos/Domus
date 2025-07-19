@@ -10,7 +10,7 @@ Repositório do Trabalho de Conclusão de Curso (TCC) para o desenvolvimento do 
 
 O vídeo abaixo demonstra as principais funcionalidades do robô em ação: busca e coleta de objetos e o acompanhamento de um alvo humano.
 
-[![Demonstração do Robô Domus](https://i.ytimg.com/vi/nK-C35t52iA/mqdefault.jpg)](https://youtu.be/rp_-HHrAA_I)
+[![Demonstração do Robô Domus](https://i.ytimg.com/vi/rp_-HHrAA_I/mqdefault.jpg)](https://youtu.be/rp_-HHrAA_I)
 > **Clique na imagem para assistir ao vídeo de demonstração no YouTube**
 
 ---
